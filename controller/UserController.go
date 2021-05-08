@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
@@ -26,18 +27,18 @@ func Register(c *gin.Context) {
 	phone := c.PostForm("phone")
 	//手机号必须为11位
 	if len(phone) != 11 {
-		c.JSON(http.StatusUnprocessableEntity,gin.H{
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
 			"status": "fail",
-			"msg": "手机号必须为11位",
+			"msg":    "手机号必须为11位",
 		})
 		return
 	}
 
 	//密码至少为6位
 	if len(password) < 6 {
-		c.JSON(http.StatusUnprocessableEntity,gin.H{
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
 			"status": "fail",
-			"msg": "密码不能少于6位！",
+			"msg":    "密码不能少于6位！",
 		})
 		return
 	}
@@ -48,20 +49,20 @@ func Register(c *gin.Context) {
 	}
 
 	//判断手机号是否存在
-	if utils.PhoneIsExisted(phone,db){
-		c.JSON(http.StatusUnprocessableEntity,gin.H{
+	if utils.PhoneIsExisted(phone, db) {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
 			"status": "fail",
-			"msg": "该手机号已被注册！",
+			"msg":    "该手机号已被注册！",
 		})
 		return
 	}
 
 	//密码加密
-	hasedPassword, err := bcrypt.GenerateFromPassword([]byte(password),bcrypt.DefaultCost)
+	hasedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError,gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"status": "fail",
-			"msg": "密码加密出错！",
+			"msg":    "密码加密出错！",
 		})
 		return
 	}
@@ -70,18 +71,18 @@ func Register(c *gin.Context) {
 	var user = model.User{
 		Username: username,
 		Password: string(hasedPassword),
-		Phone: phone,
+		Phone:    phone,
 	}
 
 	db.Debug().Create(&user)
 
 	//返回结果
-	c.JSON(http.StatusOK,gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"message": "success to register!",
 	})
 }
 
-func Login(c *gin.Context){
+func Login(c *gin.Context) {
 	//获取参数
 	db := common.GetDB()
 
@@ -90,51 +91,59 @@ func Login(c *gin.Context){
 
 	//手机号必须为11位
 	if len(phone) != 11 {
-		c.JSON(http.StatusUnprocessableEntity,gin.H{
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
 			"status": "fail",
-			"msg": "手机号必须为11位",
+			"msg":    "手机号必须为11位",
 		})
 		return
 	}
 
 	//密码至少为6位
 	if len(password) < 6 {
-		c.JSON(http.StatusUnprocessableEntity,gin.H{
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
 			"status": "fail",
-			"msg": "密码不能少于6位！",
+			"msg":    "密码不能少于6位！",
 		})
 		return
 	}
 
 	//根据手机号查询用户
 	var user model.User
-	db.Where("phone = ?",phone).Find(&user)
+	db.Where("phone = ?", phone).Find(&user)
 
 	//若用户不存在
 	if user.ID == 0 {
-		c.JSON(http.StatusUnprocessableEntity,gin.H{
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
 			"status": "fail",
-			"msg": "用户不存在！",
+			"msg":    "用户不存在！",
 		})
 		return
 	}
 
 	//解密、判断密码是否正确
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password),[]byte(password)); err != nil{
-		c.JSON(http.StatusBadRequest,gin.H{
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
 			"status": "fail",
-			"msg": "密码错误！",
+			"msg":    "密码错误！",
 		})
 		return
 	}
 
 	//发放token
-	token := "sss"
+	token, _ := utils.GetToken(phone)
+	fmt.Println(token)
 
 	c.JSON(http.StatusOK, gin.H{
 		"status": "success",
-		"msg": "登录成功!",
-		"data": gin.H{"token": token},
+		"msg":    "登录成功!",
+		"data":   gin.H{"token": token},
 	})
 
+}
+
+func HomeHandler(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"code": 200,
+		"msg":  "Success!",
+	})
 }
